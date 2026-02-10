@@ -1,20 +1,19 @@
 from http import HTTPStatus
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, HTTPException
 from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
-from sqlalchemy.orm import Session
 
-from fast_zero.database import get_session
+from fast_zero.database import GetSession
 from fast_zero.models import User
 from fast_zero.schemas import Message, UserList, UserPublic, UserSchema
-from fast_zero.security import get_current_user, get_password_hash
+from fast_zero.security import CurrentUser, get_password_hash
 
 app = APIRouter(prefix='/users', tags=['users'])
 
 
 @app.post('/', status_code=HTTPStatus.CREATED, response_model=UserPublic)
-def create_user(user: UserSchema, session: Session = Depends(get_session)):
+def create_user(user: UserSchema, session: GetSession):
     db_user = session.scalar(
         select(User).where(
             (User.email == user.email) | (User.username == user.username)
@@ -44,10 +43,10 @@ def create_user(user: UserSchema, session: Session = Depends(get_session)):
 
 @app.get('/', status_code=HTTPStatus.OK, response_model=UserList)
 def read_users(
+    session: GetSession,
+    current_user: CurrentUser,
     limit: int = 10,
     offset: int = 0,
-    session: Session = Depends(get_session),
-    current_user: str = Depends(get_current_user),
 ):
     users = session.scalars(select(User).offset(offset).limit(limit))
     return {'users': users}
@@ -57,8 +56,8 @@ def read_users(
 def update_user(
     user_id: int,
     user: UserSchema,
-    session: Session = Depends(get_session),
-    current_user: str = Depends(get_current_user),
+    session: GetSession,
+    current_user: CurrentUser,
 ):
     if current_user.id != user_id:
         raise HTTPException(
@@ -89,8 +88,8 @@ def update_user(
 @app.delete('/{user_id}', status_code=HTTPStatus.OK, response_model=Message)
 def delete_user(
     user_id: int,
-    session: Session = Depends(get_session),
-    current_user: str = Depends(get_current_user),
+    session: GetSession,
+    current_user: CurrentUser,
 ):
 
     if current_user.id != user_id:

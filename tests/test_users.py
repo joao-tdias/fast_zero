@@ -3,7 +3,7 @@ from http import HTTPStatus
 from fast_zero.schemas import UserPublic
 
 
-def test_create_user_must_return_user_with_id(client):
+def test_create_user_must_return_user_with_id(session, client):
     response = client.post(
         '/users/',
         json={
@@ -20,7 +20,9 @@ def test_create_user_must_return_user_with_id(client):
     }
 
 
-def test_create_user_must_return_409_if_username_already_exists(client, user):
+def test_create_user_must_return_409_if_username_already_exists(
+    session, client, user
+):
     response = client.post(
         '/users/',
         json={
@@ -33,7 +35,9 @@ def test_create_user_must_return_409_if_username_already_exists(client, user):
     assert response.json() == {'detail': 'Username already registered'}
 
 
-def test_create_user_must_return_409_if_email_already_exists(client, user):
+def test_create_user_must_return_409_if_email_already_exists(
+    session, client, user
+):
     response = client.post(
         '/users/',
         json={
@@ -46,16 +50,17 @@ def test_create_user_must_return_409_if_email_already_exists(client, user):
     assert response.json() == {'detail': 'Email already registered'}
 
 
-def test_read_users_must_return_list_of_users(client, user, token):
+def test_read_users_must_return_list_of_users(session, client, user, token):
     user_schema = UserPublic.model_validate(user).model_dump()
     response = client.get(
         '/users/', headers={'Authorization': f'Bearer {token}'}
     )
+    breakpoint()
     assert response.status_code == HTTPStatus.OK
     assert response.json() == {'users': [user_schema]}
 
 
-def test_update_user_must_return_updated_user(client, user, token):
+def test_update_user_must_return_updated_user(session, client, user, token):
     response = client.put(
         '/users/1',
         json={
@@ -73,7 +78,7 @@ def test_update_user_must_return_updated_user(client, user, token):
     }
 
 
-def test_update_user_must_return_404_if_user_not_found(client, token):
+def test_update_user_must_return_404_if_user_not_found(session, client, token):
     response = client.put(
         '/users/999',
         json={
@@ -87,7 +92,7 @@ def test_update_user_must_return_404_if_user_not_found(client, token):
     assert response.json() == {'detail': 'Not enough permissions'}
 
 
-def test_update_integrity_error(client, user, token):
+def test_update_integrity_error(session, client, user, token):
     response = client.post(
         '/users/',
         json={
@@ -113,7 +118,7 @@ def test_update_integrity_error(client, user, token):
     }
 
 
-def test_delete_user_must_return_204_no_content(client, user, token):
+def test_delete_user_must_return_204_no_content(session, client, user, token):
     response = client.delete(
         '/users/1',
         headers={'Authorization': f'Bearer {token}'},
@@ -122,7 +127,7 @@ def test_delete_user_must_return_204_no_content(client, user, token):
     assert response.json() == {'message': 'User deleted successfully'}
 
 
-def test_delete_user_must_return_404_if_user_not_found(client, token):
+def test_delete_user_must_return_404_if_user_not_found(session, client, token):
     response = client.delete(
         '/users/999',
         headers={'Authorization': f'Bearer {token}'},

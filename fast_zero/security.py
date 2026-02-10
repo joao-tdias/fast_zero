@@ -14,9 +14,9 @@ from fast_zero.database import GetSession
 from fast_zero.models import User
 from fast_zero.settings import Settings
 
-ALGORITHM = 'HS256'
-ACCESS_TOKEN_EXPIRE_MINUTES = 30
 SECRET_KEY = Settings().SECRET_KEY
+ALGORITHM = Settings().ALGORITHM
+ACCESS_TOKEN_EXPIRE_MINUTES = Settings().ACCESS_TOKEN_EXPIRE_MINUTES
 
 pwd_context = PasswordHash.recommended()
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl='/auth/login')

@@ -9,6 +9,7 @@ from sqlalchemy.orm import Session
 from fast_zero.database import get_session
 from fast_zero.models import User
 from fast_zero.schemas import Message, UserList, UserPublic, UserSchema
+from fast_zero.security import get_password_hash
 
 app = FastAPI()
 
@@ -53,7 +54,10 @@ def create_user(user: UserSchema, session: Session = Depends(get_session)):
                 detail='Username already registered',
             )
 
-    db_user = User(**user.model_dump())
+    db_user = User(
+        **user.model_dump(exclude='password'),
+        password=get_password_hash(user.password),
+    )
     session.add(db_user)
     session.commit()
     session.refresh(db_user)
@@ -80,9 +84,15 @@ def update_user(
             status_code=HTTPStatus.NOT_FOUND, detail='User not found'
         )
     try:
-        data = user.model_dump(exclude_unset=True)
+        data = user.model_dump(exclude_unset=True, exclude={'password'})
+        hashed_password = (
+            get_password_hash(user.password) if user.password else None
+        )
         for k, v in data.items():
             setattr(db_user, k, v)
+
+        if hashed_password:
+            db_user.password = hashed_password
 
         session.commit()
         session.refresh(db_user)

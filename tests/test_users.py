@@ -1,0 +1,131 @@
+from http import HTTPStatus
+
+from fast_zero.schemas import UserPublic
+
+
+def test_create_user_must_return_user_with_id(client):
+    response = client.post(
+        '/users/',
+        json={
+            'username': 'joao',
+            'email': 'joao@example.com',
+            'password': 'senha',
+        },
+    )
+    assert response.status_code == HTTPStatus.CREATED
+    assert response.json() == {
+        'username': 'joao',
+        'email': 'joao@example.com',
+        'id': 1,
+    }
+
+
+def test_create_user_must_return_409_if_username_already_exists(client, user):
+    response = client.post(
+        '/users/',
+        json={
+            'username': 'joao',
+            'email': 'joao2@example.com',
+            'password': 'senha',
+        },
+    )
+    assert response.status_code == HTTPStatus.CONFLICT
+    assert response.json() == {'detail': 'Username already registered'}
+
+
+def test_create_user_must_return_409_if_email_already_exists(client, user):
+    response = client.post(
+        '/users/',
+        json={
+            'username': 'joao2',
+            'email': 'joao@example.com',
+            'password': 'senha',
+        },
+    )
+    assert response.status_code == HTTPStatus.CONFLICT
+    assert response.json() == {'detail': 'Email already registered'}
+
+
+def test_read_users_must_return_list_of_users(client, user, token):
+    user_schema = UserPublic.model_validate(user).model_dump()
+    response = client.get(
+        '/users/', headers={'Authorization': f'Bearer {token}'}
+    )
+    assert response.status_code == HTTPStatus.OK
+    assert response.json() == {'users': [user_schema]}
+
+
+def test_update_user_must_return_updated_user(client, user, token):
+    response = client.put(
+        '/users/1',
+        json={
+            'username': 'joao_updated',
+            'email': 'joao_updated@example.com',
+            'password': 'senha',
+        },
+        headers={'Authorization': f'Bearer {token}'},
+    )
+    assert response.status_code == HTTPStatus.OK
+    assert response.json() == {
+        'username': 'joao_updated',
+        'email': 'joao_updated@example.com',
+        'id': 1,
+    }
+
+
+def test_update_user_must_return_404_if_user_not_found(client, token):
+    response = client.put(
+        '/users/999',
+        json={
+            'username': 'non_existent',
+            'email': 'non_existent@example.com',
+            'password': 'senha',
+        },
+        headers={'Authorization': f'Bearer {token}'},
+    )
+    assert response.status_code == HTTPStatus.FORBIDDEN
+    assert response.json() == {'detail': 'Not enough permissions'}
+
+
+def test_update_integrity_error(client, user, token):
+    response = client.post(
+        '/users/',
+        json={
+            'username': 'another_user',
+            'email': 'another_user@example.com',
+            'password': 'senha',
+        },
+    )
+
+    response_update = client.put(
+        f'/users/{user.id}',
+        json={
+            'username': 'another_user',
+            'email': 'change@example.com',
+            'password': 'senha',
+        },
+        headers={'Authorization': f'Bearer {token}'},
+    )
+    assert response.status_code == HTTPStatus.CREATED
+    assert response_update.status_code == HTTPStatus.CONFLICT
+    assert response_update.json() == {
+        'detail': 'Username or email already registered'
+    }
+
+
+def test_delete_user_must_return_204_no_content(client, user, token):
+    response = client.delete(
+        '/users/1',
+        headers={'Authorization': f'Bearer {token}'},
+    )
+    assert response.status_code == HTTPStatus.OK
+    assert response.json() == {'message': 'User deleted successfully'}
+
+
+def test_delete_user_must_return_404_if_user_not_found(client, token):
+    response = client.delete(
+        '/users/999',
+        headers={'Authorization': f'Bearer {token}'},
+    )
+    assert response.status_code == HTTPStatus.FORBIDDEN
+    assert response.json() == {'detail': 'Not enough permissions'}

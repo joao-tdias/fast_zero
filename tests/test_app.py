@@ -147,3 +147,14 @@ def test_delete_user_must_return_404_if_user_not_found(client):
     response = client.delete('/users/999')
     assert response.status_code == HTTPStatus.NOT_FOUND
     assert response.json() == {'detail': 'User not found'}
+
+
+def test_login(client, user):
+    response = client.post(
+        '/login',
+        data={'username': user.email, 'password': user.clean_password},
+    )
+    token = response.json()
+    assert response.status_code == HTTPStatus.OK
+    assert 'access_token' in token
+    assert token['token_type'] == 'Bearer'

@@ -12,6 +12,7 @@ from fast_zero.models import User
 from fast_zero.schemas import Message, Token, UserList, UserPublic, UserSchema
 from fast_zero.security import (
     create_access_token,
+    get_current_user,
     get_password_hash,
     verify_password,
 )
@@ -71,7 +72,10 @@ def create_user(user: UserSchema, session: Session = Depends(get_session)):
 
 @app.get('/users/', status_code=HTTPStatus.OK, response_model=UserList)
 def read_users(
-    limit: int = 10, offset: int = 0, session: Session = Depends(get_session)
+    limit: int = 10,
+    offset: int = 0,
+    session: Session = Depends(get_session),
+    current_user: str = Depends(get_current_user),
 ):
     users = session.scalars(select(User).offset(offset).limit(limit))
     return {'users': users}
@@ -81,12 +85,15 @@ def read_users(
     '/users/{user_id}', status_code=HTTPStatus.OK, response_model=UserPublic
 )
 def update_user(
-    user_id: int, user: UserSchema, session: Session = Depends(get_session)
+    user_id: int,
+    user: UserSchema,
+    session: Session = Depends(get_session),
+    current_user: str = Depends(get_current_user),
 ):
-    db_user = session.scalar(select(User).where(User.id == user_id))
-    if not db_user:
+    if current_user.id != user_id:
         raise HTTPException(
-            status_code=HTTPStatus.NOT_FOUND, detail='User not found'
+            status_code=HTTPStatus.FORBIDDEN,
+            detail='Not enough permissions',
         )
     try:
         data = user.model_dump(exclude_unset=True, exclude={'password'})
@@ -94,14 +101,14 @@ def update_user(
             get_password_hash(user.password) if user.password else None
         )
         for k, v in data.items():
-            setattr(db_user, k, v)
+            setattr(current_user, k, v)
 
         if hashed_password:
-            db_user.password = hashed_password
+            current_user.password = hashed_password
 
         session.commit()
-        session.refresh(db_user)
-        return db_user
+        session.refresh(current_user)
+        return current_user
     except IntegrityError:
         raise HTTPException(
             status_code=HTTPStatus.CONFLICT,
@@ -112,14 +119,19 @@ def update_user(
 @app.delete(
     '/users/{user_id}', status_code=HTTPStatus.OK, response_model=Message
 )
-def delete_user(user_id: int, session: Session = Depends(get_session)):
-    db_user = session.scalar(select(User).where(User.id == user_id))
-    if not db_user:
+def delete_user(
+    user_id: int,
+    session: Session = Depends(get_session),
+    current_user: str = Depends(get_current_user),
+):
+
+    if current_user.id != user_id:
         raise HTTPException(
-            status_code=HTTPStatus.NOT_FOUND, detail='User not found'
+            status_code=HTTPStatus.FORBIDDEN,
+            detail='Not enough permissions',
         )
 
-    session.delete(db_user)
+    session.delete(current_user)
     session.commit()
     return Message(message='User deleted successfully')
 

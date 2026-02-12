@@ -42,7 +42,7 @@ def create_access_token(data: dict) -> str:
     return encoded_jwt
 
 
-def get_current_user(session: GetSession, token: Oauth2Scheme) -> str:
+async def get_current_user(session: GetSession, token: Oauth2Scheme) -> str:
     credentials_exception = HTTPException(
         status_code=HTTPStatus.UNAUTHORIZED,
         detail='Could not validate credentials',
@@ -55,7 +55,9 @@ def get_current_user(session: GetSession, token: Oauth2Scheme) -> str:
             raise credentials_exception
     except DecodeError:
         raise credentials_exception
-    user = session.scalar(select(User).where(User.email == subject_email))
+    user = await session.scalar(
+        select(User).where(User.email == subject_email)
+    )
     if not user:
         raise credentials_exception
     return user

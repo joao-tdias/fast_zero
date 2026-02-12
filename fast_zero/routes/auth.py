@@ -20,11 +20,13 @@ app = APIRouter(prefix='/auth', tags=['auth'])
 
 
 @app.post('/login', status_code=HTTPStatus.OK, response_model=Token)
-def login(
+async def login(
     session: GetSession,
     form_data: FormData,
 ):
-    user = session.scalar(select(User).where(User.email == form_data.username))
+    user = await session.scalar(
+        select(User).where(User.email == form_data.username)
+    )
     if not user or not verify_password(form_data.password, user.password):
         raise HTTPException(
             status_code=HTTPStatus.UNAUTHORIZED, detail='Invalid credentials'

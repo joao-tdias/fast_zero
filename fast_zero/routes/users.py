@@ -21,8 +21,8 @@ Filter = Annotated[FilterPage, Query()]
 
 
 @app.post('/', status_code=HTTPStatus.CREATED, response_model=UserPublic)
-def create_user(user: UserSchema, session: GetSession):
-    db_user = session.scalar(
+async def create_user(user: UserSchema, session: GetSession):
+    db_user = await session.scalar(
         select(User).where(
             (User.email == user.email) | (User.username == user.username)
         )
@@ -44,24 +44,23 @@ def create_user(user: UserSchema, session: GetSession):
         password=get_password_hash(user.password),
     )
     session.add(db_user)
-    session.commit()
-    session.refresh(db_user)
+    await session.commit()
+    await session.refresh(db_user)
     return db_user
 
 
 @app.get('/', status_code=HTTPStatus.OK, response_model=UserList)
-def read_users(
+async def read_users(
     session: GetSession, current_user: CurrentUser, filter_users: Filter
-):
-    breakpoint()
-    users = session.scalars(
+) -> UserList:
+    users = await session.scalars(
         select(User).offset(filter_users.offset).limit(filter_users.limit)
     )
     return {'users': users}
 
 
 @app.put('/{user_id}', status_code=HTTPStatus.OK, response_model=UserPublic)
-def update_user(
+async def update_user(
     user_id: int,
     user: UserSchema,
     session: GetSession,
@@ -83,8 +82,8 @@ def update_user(
         if hashed_password:
             current_user.password = hashed_password
 
-        session.commit()
-        session.refresh(current_user)
+        await session.commit()
+        await session.refresh(current_user)
         return current_user
     except IntegrityError:
         raise HTTPException(
@@ -94,7 +93,7 @@ def update_user(
 
 
 @app.delete('/{user_id}', status_code=HTTPStatus.OK, response_model=Message)
-def delete_user(
+async def delete_user(
     user_id: int,
     session: GetSession,
     current_user: CurrentUser,
@@ -107,5 +106,5 @@ def delete_user(
         )
 
     session.delete(current_user)
-    session.commit()
+    await session.commit()
     return Message(message='User deleted successfully')

@@ -55,7 +55,6 @@ def test_read_users_must_return_list_of_users(session, client, user, token):
     response = client.get(
         '/users/', headers={'Authorization': f'Bearer {token}'}
     )
-    breakpoint()
     assert response.status_code == HTTPStatus.OK
     assert response.json() == {'users': [user_schema]}
 

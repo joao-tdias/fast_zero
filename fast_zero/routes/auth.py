@@ -9,6 +9,7 @@ from fast_zero.database import GetSession
 from fast_zero.models import User
 from fast_zero.schemas import Token
 from fast_zero.security import (
+    CurrentUser,
     create_access_token,
     verify_password,
 )
@@ -33,3 +34,9 @@ async def login(
         )
     access_token = create_access_token({'sub': user.email})
     return Token(access_token=access_token, token_type='Bearer')
+
+
+@app.post('/refresh_token', status_code=HTTPStatus.OK, response_model=Token)
+async def refresh(user: CurrentUser):
+    new_token = create_access_token(data={'sub': user.email})
+    return Token(access_token=new_token, token_type='Bearer')

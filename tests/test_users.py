@@ -26,7 +26,7 @@ def test_create_user_must_return_409_if_username_already_exists(
     response = client.post(
         '/users/',
         json={
-            'username': 'joao',
+            'username': user.username,
             'email': 'joao2@example.com',
             'password': 'senha',
         },
@@ -42,7 +42,7 @@ def test_create_user_must_return_409_if_email_already_exists(
         '/users/',
         json={
             'username': 'joao2',
-            'email': 'joao@example.com',
+            'email': user.email,
             'password': 'senha',
         },
     )
@@ -100,7 +100,6 @@ def test_update_integrity_error(session, client, user, token):
             'password': 'senha',
         },
     )
-
     response_update = client.put(
         f'/users/{user.id}',
         json={
